@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Topshelf.Options;
-using SystemPath = System.IO.Path;
 
 namespace FileWatcher
 {

@@ -31,6 +31,15 @@ namespace FileWatcher
 
             foreach (var job in batchJobs)
             {
+                //Check and Validate that today is a valid batch window day
+                string[] windowDays = job.Element("WindowDays").Value.Split('|');
+                string abbreviatedDay = DateTime.Now.DayOfWeek.ToString().Substring(0, 3);
+                if (!windowDays.Contains(abbreviatedDay)){
+                    Console.WriteLine($"today is not active day for Job ID {job.Element("JobID")}");
+                    continue;
+                }
+
+                //Check and validate that Batch window is open
                 TimeOnly startTime = TimeOnly.Parse(job.Element("WindowStart").Value);
                 TimeOnly endTime = TimeOnly.Parse(job.Element("WindowEnd").Value);
                 TimeOnly currentTime = TimeOnly.Parse(DateTime.Now.ToLongTimeString());

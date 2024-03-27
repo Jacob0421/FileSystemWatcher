@@ -85,11 +85,12 @@ namespace FileWatcher
 
         public void Start()
         {
-
+            _logger.Info("FileWatcher Service Starting up");
             //Load Config XML
             string configStr = File.ReadAllText(configPath);
             _config = XElement.Parse(configStr);
-            _logger.Info("Testing Testing");
+
+            _logger.Info("Config Loaded");
 
             _timer.Start();
         }
@@ -101,8 +102,11 @@ namespace FileWatcher
                 WatcherJob ToBeDisposed = job.Value;
                 _watchers.Remove(job.Key);
                 ToBeDisposed.Dispose();
+                _logger.Info("JobId {0} disposed.", job.Key);
             }
+            _logger.Info("Stopping FileWatcher Service");
             _timer.Stop();
+            _logger.Info("FileWatcher Service timer stopped");
         }
     }
 }

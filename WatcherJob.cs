@@ -9,7 +9,7 @@ namespace FileWatcher
 {
     public class WatcherJob : FileSystemWatcher
     {
-        public WatcherJob(string jobType,  string monitoredPath, string? outputFilePath, string filenamePattern = "*.*") {
+        public WatcherJob(string jobType,  string monitoredPath, string? outputFilePath, string? filenamePattern) {
 
             switch (jobType)
             {

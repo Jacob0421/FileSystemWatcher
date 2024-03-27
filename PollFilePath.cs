@@ -12,7 +12,7 @@ namespace FileWatcher
 
         private readonly string configPath = @"C:\Users\Jacob\Documents\C# Projects\FileSystemWatcher\FileSystemWatcher\FileSystemWatcher.config";
 
-        private List<WatcherJob> _watchers = new List<WatcherJob>();
+        private Dictionary<string, WatcherJob> _watchers = new Dictionary<string, WatcherJob>();
 
         public PollFilePath()
         {
@@ -31,11 +31,21 @@ namespace FileWatcher
 
             foreach (var job in batchJobs)
             {
+                string jobID = job.Element("JobID").Value;
+
                 //Check and Validate that today is a valid batch window day
                 string[] windowDays = job.Element("WindowDays").Value.Split('|');
                 string abbreviatedDay = DateTime.Now.DayOfWeek.ToString().Substring(0, 3);
                 if (!windowDays.Contains(abbreviatedDay)){
                     Console.WriteLine($"today is not active day for Job ID {job.Element("JobID")}");
+
+                    if (_watchers.ContainsKey(jobID))
+                    {
+                        WatcherJob toBeRemoved = _watchers.FirstOrDefault(x => x.Key == jobID).Value;
+                        _watchers.Remove(jobID);
+                        toBeRemoved.Dispose();
+                        Console.WriteLine($"JobId {jobID} has been disposed");
+                    }
                     continue;
                 }
 
@@ -48,27 +58,30 @@ namespace FileWatcher
                 {
                     job.Element("IsActive").Value = "0";
                     Console.WriteLine($"Job ID {job.Element("JobID").Value} is not within active window.");
+                    if (_watchers.ContainsKey(jobID))
+                    {
+                        WatcherJob toBeRemoved = _watchers.FirstOrDefault(x => x.Key == jobID).Value;
+                        _watchers.Remove(jobID);
+                        toBeRemoved.Dispose();
+                        Console.WriteLine($"JobId {jobID} has been disposed");
+                    }
                     continue;
                 }
 
                 //Check if job is currently running
-                if (job.Element("IsActive").Value == "1")
+                if (_watchers.ContainsKey(jobID))
                 {
                     Console.WriteLine($"Job ID {job.Element("JobID").Value} is already running.");
                     continue;
                 }
 
-                //
-
                 //instantiate new watcherJob
                 WatcherJob newJob = new WatcherJob(job.Element("JobType").Value, job.Element("InputPath").Value, job.Element("DestinationPath").Value, job.Element("FileNamePattern").Value);
-                _watchers.Add(newJob);
+                _watchers.Add(job.Element("JobID").Value, newJob);
 
                 //Temporarily updating value while the program is running. Would normally like this to be updated in a DB or other source instead of directly 
                 job.Element("IsActive").Value = "1";
             }
-
-            //Check if any are active and window has closed
         }
 
         public void Start()
@@ -82,9 +95,11 @@ namespace FileWatcher
 
         public void Stop()
         {
-            foreach (WatcherJob job in _watchers)
+            foreach (KeyValuePair<string, WatcherJob> job in _watchers)
             {
-                job.Dispose();
+                WatcherJob ToBeDisposed = job.Value;
+                _watchers.Remove(job.Key);
+                ToBeDisposed.Dispose();
             }
             _timer.Stop();
         }

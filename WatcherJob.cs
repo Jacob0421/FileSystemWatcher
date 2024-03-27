@@ -19,12 +19,9 @@ namespace FileWatcher
                 default:
                     break;
             }
-            //this.Changed += OnChanged;
-            //this.Deleted += OnDeleted;
             this.Path = monitoredPath;
             this.Filter = filenamePattern;
             this.EnableRaisingEvents = true;
-
         }
 
         private void OnCreatedMoveFile(object? sender, FileSystemEventArgs e, string outputPath)
@@ -37,8 +34,6 @@ namespace FileWatcher
             while (retryCount < 3) { 
                 try { 
                     File.Move(fileInfo.FullName, ($"{outputPath}{fileInfo.Name.Split(".")[0]}_{formattedTime}{fileInfo.Extension}"));
-                    Console.WriteLine("File Moved.");
-                    Console.WriteLine($"{outputPath}{fileInfo.Name.Split(".")[0]}_{formattedTime}{fileInfo.Extension}");
                 }
                 catch (IOException error) { 
                     retryCount++;

@@ -9,6 +9,9 @@ namespace FileWatcher
 {
     public class WatcherJob : FileSystemWatcher
     {
+
+        private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
+
         public WatcherJob(string jobType,  string monitoredPath, string? outputFilePath, string? filenamePattern) {
 
             switch (jobType)
@@ -33,12 +36,14 @@ namespace FileWatcher
             int retryCount = 0;
             while (retryCount < 3) { 
                 try { 
-                    File.Move(fileInfo.FullName, ($"{outputPath}{fileInfo.Name.Split(".")[0]}_{formattedTime}{fileInfo.Extension}"));
+                    File.Move(fileInfo.FullName, $"{outputPath}{fileInfo.Name.Split(".")[0]}_{formattedTime}{fileInfo.Extension}");
+                    _logger.Info("File moved.\n input: {0}\noutput: {1}", fileInfo.FullName, $"{outputPath}{fileInfo.Name.Split(".")[0]}_{formattedTime}{fileInfo.Extension}");
                 }
-                catch (IOException error) { 
+                catch (IOException error) {
+                    _logger.Error("Write error while attepting to move {0}, retrying in .250 seconds. retry count: {1} of 3", fileInfo.FullName, retryCount + 1);
                     retryCount++;
                     Thread.Sleep(250);
-                }
+                }                                                                                                                                                         
             }
 
             e = null;

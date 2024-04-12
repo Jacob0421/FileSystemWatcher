@@ -1,6 +1,6 @@
-﻿namespace FileWatcher.src.BatchJobs
+﻿namespace FileWatcher.src.Jobs
 {
-    public class BatchJob
+    public class Job
     {
 
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();

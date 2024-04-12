@@ -1,63 +1,63 @@
-﻿using FileWatcher.src.BatchJobs;
+﻿using FileWatcher.src.Jobs;
 using System.Xml.Linq;
 
-namespace FileWatcher.src.BatchFiles.Repositories
+namespace FileWatcher.src.Jobs.Repositories
 {
 
-    public class BatchJobRepository
+    public class JobRepository
     {
-        private List<BatchJob> _batchJobs = new();
+        private List<Job> _jobs = new();
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
 
-        public IEnumerable<BatchJob> ParseFromConfig(IEnumerable<XElement> BatchJobItems)
+        public IEnumerable<Job> ParseFromConfig(IEnumerable<XElement> JobItems)
         {
-            List<BatchJob> fromConfig = new();
+            List<Job> fromConfig = new();
 
             int jobID;
             string jobName, jobType, inputPath, destinationPath, fileNamePattern;
             TimeOnly windowStart, windowEnd;
             string[] windowDays;
-            foreach (var BatchJobItem in BatchJobItems)
+            foreach (var JobItem in JobItems)
             {
                 try {
-                    jobID = Int32.Parse(BatchJobItem.Element("JobID").Value);
+                    jobID = Int32.Parse(JobItem.Element("JobID").Value);
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"Error loading Job ID {BatchJobItem.Element("JobId").Value} Please confirm that this is a number that can be converted to Integer form.\n" +
+                    _logger.Error($"Error loading Job ID {JobItem.Element("JobID").Value} Please confirm that this is a number that can be converted to Integer form.\n" +
                         $"Exception: {e}");
                     continue;
                 }
 
-                jobName = BatchJobItem.Element("JobName").Value;
-                jobType = BatchJobItem.Element("JobType").Value;
-                inputPath = BatchJobItem.Element("InputPath").Value;
-                destinationPath = BatchJobItem.Element("DestinationPath").Value;
-                fileNamePattern = BatchJobItem.Element("FileNamePattern").Value;
+                jobName = JobItem.Element("JobName").Value;
+                jobType = JobItem.Element("JobType").Value;
+                inputPath = JobItem.Element("InputPath").Value;
+                destinationPath = JobItem.Element("DestinationPath").Value;
+                fileNamePattern = JobItem.Element("FileNamePattern").Value;
 
                 try
                 {
-                    windowStart = TimeOnly.Parse(BatchJobItem.Element("WindowStart").Value);
+                    windowStart = TimeOnly.Parse(JobItem.Element("WindowStart").Value);
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"Error loading windowStart for Job ID {BatchJobItem.Element("JobId").Value} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
+                    _logger.Error($"Error loading windowStart for Job ID {JobItem.Element("JobId").Value} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
                         $"Exception: {e}");
                     continue;
                 }
 
                 try
                 {
-                    windowEnd = TimeOnly.Parse(BatchJobItem.Element("WindowEnd").Value);
+                    windowEnd = TimeOnly.Parse(JobItem.Element("WindowEnd").Value);
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"Error loading WindowEnd for Job ID {BatchJobItem.Element("JobId").Value} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
+                    _logger.Error($"Error loading WindowEnd for Job ID {JobItem.Element("JobId").Value} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
                         $"Exception: {e}");
                     continue;
                 }
 
-                windowDays = BatchJobItem.Element("WindowDays").Value.Split("|");
+                windowDays = JobItem.Element("WindowDays").Value.Split("|");
 
                 string str;
                 for (int i = 0; i < windowDays.Length; i++)
@@ -65,7 +65,7 @@ namespace FileWatcher.src.BatchFiles.Repositories
                     str = windowDays[i].Trim();
                     if (str.Length != 3)
                     {
-                        _logger.Error(($"Error loading WindowDays for Job ID {BatchJobItem.Element("JobId").Value} Please confirm that the string is in the valid format to be parsed by the system I.E. \"Mon|Tue|Thu etc.\"."));
+                        _logger.Error(($"Error loading WindowDays for Job ID {JobItem.Element("JobId").Value} Please confirm that the string is in the valid format to be parsed by the system I.E. \"Mon|Tue|Thu etc.\"."));
                         break;
                     }
                     windowDays[i] = str;
@@ -92,44 +92,44 @@ namespace FileWatcher.src.BatchFiles.Repositories
                         break;
                 }
             }
-            SetBatchJobs( fromConfig );
+            SetJobs( fromConfig );
 
-            return _batchJobs;
+            return _jobs;
         }
 
-        public List<BatchJob> SetBatchJobs(List<BatchJob> batchJobs)
+        public List<Job> SetJobs(List<Job> jobs)
         {
-            _batchJobs = batchJobs;
-            return _batchJobs;
+            _jobs = jobs;
+            return jobs;
         }
 
 
-        public IEnumerable<BatchJob> GetAllJobs()
+        public IEnumerable<Job> GetAllJobs()
         {
-            return _batchJobs;
+            return _jobs;
         }
 
-        public IEnumerable<BatchJob> GetActiveJobs()
+        public IEnumerable<Job> GetActiveJobs()
         {
-            return _batchJobs.Where(b => b.IsActive);
+            return _jobs.Where(b => b.IsActive);
         }
 
-        public IEnumerable<BatchJob> GetInactiveJobs()
+        public IEnumerable<Job> GetInactiveJobs()
         {
-            return _batchJobs.Where(b => !b.IsActive);
+            return _jobs.Where(b => !b.IsActive);
         }
 
-        public BatchJob GetJobByName(string jobName)
+        public Job GetJobByName(string jobName)
         {
-            return _batchJobs.FirstOrDefault(b => b.JobName == jobName);
+            return _jobs.FirstOrDefault(b => b.JobName == jobName);
         }
 
-        public BatchJob GetJobByID(int id)
+        public Job GetJobByID(int id)
         {
-            return _batchJobs.FirstOrDefault(b => b.JobID == id);
+            return _jobs.FirstOrDefault(b => b.JobID == id);
         }
 
-        public bool IsBatchJobOpen(BatchJob toTest)
+        public bool IsBatchJobOpen(Job toTest)
         {
             string abbreviatedDay = DateTime.Now.DayOfWeek.ToString().Substring(0, 3);
             if (toTest.WindowDays.Contains(abbreviatedDay))
@@ -145,7 +145,7 @@ namespace FileWatcher.src.BatchFiles.Repositories
 
         public void DisposeWatchers()
         {
-            IEnumerable<FileMover> activeMovers = _batchJobs.Where(b => b.IsActive).OfType<FileMover>();
+            IEnumerable<FileMover> activeMovers = _jobs.Where(b => b.IsActive).OfType<FileMover>();
 
             foreach (FileMover mover in activeMovers)
             {

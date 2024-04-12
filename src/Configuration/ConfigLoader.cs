@@ -9,7 +9,7 @@ namespace FileWatcher.src.Configuration
 {
     public class ConfigLoader
     {
-        private static readonly string _configLocation = @"C:\Users\Jacob\Documents\C# Projects\FileSystemWatcher\Config\FileSystemWatcher.config";
+        private static readonly string _configLocation = @"..\..\..\..\Config\FileSystemWatcher.config";
         private static XElement _config;
 
         public static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();

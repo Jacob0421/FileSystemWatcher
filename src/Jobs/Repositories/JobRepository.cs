@@ -14,12 +14,15 @@ namespace FileWatcher.src.Jobs.Repositories
             List<Job> fromConfig = new();
 
             int jobID;
-            string jobName, jobType, inputPath, destinationPath, fileNamePattern;
+            string jobName, jobType;
             TimeOnly windowStart, windowEnd;
             string[] windowDays;
             foreach (var JobItem in JobItems)
             {
-                try {
+                //TODO: switch statement that will call separate functions for parsing different Job types base on the "JobType" field provided from config.
+
+                try
+                {
                     jobID = Int32.Parse(JobItem.Element("JobID").Value);
                 }
                 catch (Exception e)
@@ -29,11 +32,8 @@ namespace FileWatcher.src.Jobs.Repositories
                     continue;
                 }
 
-                jobName = JobItem.Element("JobName").Value;
                 jobType = JobItem.Element("JobType").Value;
-                inputPath = JobItem.Element("InputPath").Value;
-                destinationPath = JobItem.Element("DestinationPath").Value;
-                fileNamePattern = JobItem.Element("FileNamePattern").Value;
+                jobName = JobItem.Element("JobName").Value;
 
                 try
                 {
@@ -71,31 +71,41 @@ namespace FileWatcher.src.Jobs.Repositories
                     windowDays[i] = str;
                 }
 
-                switch(jobType)
+                switch (jobType)
                 {
                     case "FileMover":
-                        FileMover newMover = new(
-                            jobID,
-                            jobName,
-                            jobType,
-                            inputPath,
-                            destinationPath,
-                            fileNamePattern,
-                            windowStart,
-                            windowEnd,
-                            windowDays
-                        );
-                        fromConfig.Add(newMover);
+                        string inputPath, destinationPath, fileNamePattern;
+
+                        inputPath = JobItem.Element("InputPath").Value;
+                        destinationPath = JobItem.Element("DestinationPath").Value;
+                        fileNamePattern = JobItem.Element("FileNamePattern").Value;
+
+                        FileMover mover = new FileMover(jobID, jobName, jobType, inputPath, destinationPath, fileNamePattern, windowStart, windowEnd, windowDays);
+                        fromConfig.Add(mover);
                         break;
+
+                    case "CommandJob":
+                        string command, arguments;
+                        bool adminNeeded;
+
+                        command = JobItem.Element("Command").Value;
+                        arguments = JobItem.Element("Arguments").Value;
+                        adminNeeded = bool.Parse(JobItem.Element("AdminNeeded").Value);
+
+                        CommandRunner runner = new CommandRunner(jobID, jobName, jobType, command, arguments, adminNeeded, windowStart, windowEnd, windowDays);
+                        fromConfig.Add(runner);
+                        break;
+
                     default:
-                        _logger.Error($"Invalid Job Type: {jobType}");
-                        break;
+                        _logger.Error($"Job ID {jobID} Job type \"{jobType}\" is not a valid Job type. Skipping load from config.");
+                        continue;
                 }
             }
-            SetJobs( fromConfig );
+            SetJobs(fromConfig);
 
             return _jobs;
         }
+
 
         public List<Job> SetJobs(List<Job> jobs)
         {
@@ -129,7 +139,7 @@ namespace FileWatcher.src.Jobs.Repositories
             return _jobs.FirstOrDefault(b => b.JobID == id);
         }
 
-        public bool IsBatchJobOpen(Job toTest)
+        public bool IsJobOpen(Job toTest)
         {
             string abbreviatedDay = DateTime.Now.DayOfWeek.ToString().Substring(0, 3);
             if (toTest.WindowDays.Contains(abbreviatedDay))

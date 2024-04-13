@@ -8,9 +8,6 @@
         public int JobID { get; set; }
         public string JobName { get; set; }
         public string JobType { get; set; }
-        public string InputPath { get; set; }
-        public string DestinationPath { get; set; }
-        public string FileNamePattern { get; set; }
         public TimeOnly WindowStart { get; set; }
         public TimeOnly WindowEnd { get; set; }
         public string[] WindowDays { get; set; }
@@ -31,5 +28,6 @@
         }
 
         public virtual void InitiateWatcher() { }
+        public virtual void Run() { }
     }
 }

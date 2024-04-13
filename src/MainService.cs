@@ -9,14 +9,14 @@ using Timer = System.Timers.Timer;
 
 namespace FileWatcher
 {
-    public class PollFilePath
+    public class MainService
     {
         private readonly Timer _timer;
         public static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
 
         JobRepository _jobRepo = new JobRepository();
 
-        public PollFilePath()
+        public MainService()
         {
             int TimerRefreshSeconds = 1;
 
@@ -31,10 +31,13 @@ namespace FileWatcher
 
             foreach (var job in jobs)
             {
-                if (_jobRepo.IsBatchJobOpen(job)) {
+                if (_jobRepo.IsJobOpen(job)) {
                     if(!job.IsActive && job.GetType() == typeof(FileMover) && !job.IsManuallyOverriden)
                     {
                         job.InitiateWatcher();
+                    } else if(!job.IsActive && job.GetType() == typeof(CommandRunner) && !job.IsManuallyOverriden)
+                    {
+                        job.Run();
                     }
                 }
             }
@@ -44,7 +47,7 @@ namespace FileWatcher
         {
             ConfigLoader.LoadConfig();
             IEnumerable<Job> jobs = _jobRepo.ParseFromConfig(ConfigLoader.GetConfigItem().Descendants().Elements("Job"));
-            _logger.Info($"Batch Job parsing Successful. Jobs found: {jobs.Count()}");
+            _logger.Info($"Job parsing Successful. Jobs found: {jobs.Count()}");
 
             _timer.Start();
             _logger.Info("Log started");

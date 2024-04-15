@@ -12,6 +12,8 @@ namespace FileWatcher.src.Jobs
         public string Command { get; set; } 
         public string Arguments { get; set; }
         public bool AdminNeeded { get; set; }
+        public bool RetryOnFailure { get; set; }
+        public int RetryCount { get; set; }
 
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -28,24 +30,34 @@ namespace FileWatcher.src.Jobs
         }
 
         public override void Run() {
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
-            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
-            startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-            startInfo.FileName = Command;
-            startInfo.Arguments = Arguments;
-            if (AdminNeeded)
+            int count = 0;
+            while (count < RetryCount)
             {
-                startInfo.Verb = "runas";
-            }
-            process.StartInfo = startInfo;
-            try
-            {
-                process.Start();
-            } catch (Exception ex)
-            {
-                _logger.Error($"Error Running Job ID {JobID}. Exception: \n{ex}");
-                ManualOverride();
-                _logger.Info($"Job ID {JobID} has been overridden. Please correct the command and restart the service.");
+                count++;
+                System.Diagnostics.Process process = new System.Diagnostics.Process();
+                System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
+                startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                startInfo.FileName = Command;
+                startInfo.Arguments = Arguments;
+                if (AdminNeeded)
+                {
+                    startInfo.Verb = "runas";
+                }
+                process.StartInfo = startInfo;
+                try
+                {
+                    process.Start();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Error Running Job ID {JobID}. Exception: \n{ex}");
+                    _logger.Info($"Job ID {JobID} - Retrying {count} of {RetryCount}");
+                    if(count == RetryCount - 1)
+                    {
+                        ManualOverride();
+                        _logger.Info($"Job ID {JobID} has been overridden. Please correct the command and restart the service for this command to be run.");
+                    }
+                }
             }
         }
     }

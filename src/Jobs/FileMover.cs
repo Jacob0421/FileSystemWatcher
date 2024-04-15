@@ -1,17 +1,24 @@
-﻿using NLog.Filters;
+﻿using FileWatcher.src.Jobs;
+using NLog.Filters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FileWatcher.src.BatchJobs
+namespace FileWatcher.src.Jobs
 {
-    class FileMover : BatchJob
+    class FileMover : Job
     {
 
+        public FileSystemWatcher? _watcher;
+        public string InputPath { get; set; }
+        public string DestinationPath { get; set; }
+        public string FileNamePattern { get; set; }
+
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
-        public FileSystemWatcher? _watcher; 
+        public TimeOnly WindowStart { get; set; }
+        public TimeOnly WindowEnd { get; set; }
 
         public FileMover(int JobID, string JobName, string JobType, string InputPath, string DestinationPath, string FileNamePattern, TimeOnly WindowStart, TimeOnly WindowEnd, string[] WindowDays)
         {
@@ -32,6 +39,12 @@ namespace FileWatcher.src.BatchJobs
         {
             PreProcessFiles(InputPath, DestinationPath, FileNamePattern);
 
+            if (!Directory.Exists(InputPath))
+            {
+                _logger.Error($"Job ID {JobID} - Unable to find Path. Overriding Job");
+                ManualOverride();
+                return;
+            }
 
             _watcher = new FileSystemWatcher();
             _watcher.Created += Created;
@@ -66,6 +79,13 @@ namespace FileWatcher.src.BatchJobs
         private void PreProcessFiles(string inputDirectory, string destinationDirectory, string fileNamePattern)
         {
             _logger.Info($"Job ID {JobID} - Starting Directory Pre-processing");
+
+            if(!Directory.Exists(inputDirectory))
+            {
+                _logger.Error($"Job ID {JobID} - Directory not found. Skippping Directory pre-processing");
+                return;
+
+            }
 
             string[] existingFiles = Directory.GetFiles(inputDirectory,FileNamePattern);
 

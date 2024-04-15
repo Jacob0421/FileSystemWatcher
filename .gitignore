@@ -13,8 +13,6 @@
 *.user
 *.userosscache
 *.sln.docstates
-FileSystemWatcher.config
-FileSystemWatcher.config.bak
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -583,4 +581,3 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/csharp,visualstudio
-FileSystemWatcher.config

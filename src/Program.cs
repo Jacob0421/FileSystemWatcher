@@ -8,9 +8,9 @@ namespace FileWatcher
         {
             var exitCode = HostFactory.Run(x =>
             {
-                x.Service<PollFilePath>(s =>
+                x.Service<MainService>(s =>
                 {
-                    s.ConstructUsing(pollFilePath => new PollFilePath());
+                    s.ConstructUsing(pollFilePath => new MainService());
                     s.WhenStarted(pollFilePath => pollFilePath.Start());
                     s.WhenStopped(pollFilePath => pollFilePath.Stop());
                 });

@@ -1,4 +1,5 @@
 ﻿using FileWatcher.src.Jobs;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace FileWatcher.src.Jobs.Repositories
@@ -13,99 +14,146 @@ namespace FileWatcher.src.Jobs.Repositories
         {
             List<Job> fromConfig = new();
 
-            int jobID;
-            string jobName, jobType;
-            TimeOnly windowStart, windowEnd;
-            string[] windowDays;
+            string jobType;
             foreach (var JobItem in JobItems)
             {
-                //TODO: switch statement that will call separate functions for parsing different Job types base on the "JobType" field provided from config.
-
-                try
-                {
-                    jobID = Int32.Parse(JobItem.Element("JobID").Value);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error loading Job ID {JobItem.Element("JobID").Value} Please confirm that this is a number that can be converted to Integer form.\n" +
-                        $"Exception: {e}");
-                    continue;
-                }
+                /// **DONE** switch statement that will call separate functions for parsing different Job types base on the "JobType" field provided from config.
+                ///
+                /// - **DONE**Possibly need to parse out Jobtype first then use that to route XElement Items.
+                /// - **DONE**Call a function and pass the JobItems XElement Value to it. Then do full parsing there.
+                /// - **DONE**Return the Job which is then added to JobItems.
 
                 jobType = JobItem.Element("JobType").Value;
-                jobName = JobItem.Element("JobName").Value;
 
-                try
-                {
-                    windowStart = TimeOnly.Parse(JobItem.Element("WindowStart").Value);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error loading windowStart for Job ID {JobItem.Element("JobId").Value} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
-                        $"Exception: {e}");
-                    continue;
-                }
-
-                try
-                {
-                    windowEnd = TimeOnly.Parse(JobItem.Element("WindowEnd").Value);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error loading WindowEnd for Job ID {JobItem.Element("JobId").Value} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
-                        $"Exception: {e}");
-                    continue;
-                }
-
-                windowDays = JobItem.Element("WindowDays").Value.Split("|");
-
-                string str;
-                for (int i = 0; i < windowDays.Length; i++)
-                {
-                    str = windowDays[i].Trim();
-                    if (str.Length != 3)
-                    {
-                        _logger.Error(($"Error loading WindowDays for Job ID {JobItem.Element("JobId").Value} Please confirm that the string is in the valid format to be parsed by the system I.E. \"Mon|Tue|Thu etc.\"."));
-                        break;
-                    }
-                    windowDays[i] = str;
-                }
+                Job toAdd = new Job();
 
                 switch (jobType)
                 {
                     case "FileMover":
-                        string inputPath, destinationPath, fileNamePattern;
-
-                        inputPath = JobItem.Element("InputPath").Value;
-                        destinationPath = JobItem.Element("DestinationPath").Value;
-                        fileNamePattern = JobItem.Element("FileNamePattern").Value;
-
-                        FileMover mover = new FileMover(jobID, jobName, jobType, inputPath, destinationPath, fileNamePattern, windowStart, windowEnd, windowDays);
-                        fromConfig.Add(mover);
+                        toAdd = ParseFileMoverFromXML(JobItem);
                         break;
-
-                    case "CommandJob":
-                        string command, arguments;
-                        bool adminNeeded;
-
-                        command = JobItem.Element("Command").Value;
-                        arguments = JobItem.Element("Arguments").Value;
-                        adminNeeded = bool.Parse(JobItem.Element("AdminNeeded").Value);
-
-                        CommandRunner runner = new CommandRunner(jobID, jobName, jobType, command, arguments, adminNeeded, windowStart, windowEnd, windowDays);
-                        fromConfig.Add(runner);
+                    case "CommandRunner":
+                        toAdd = ParseCommandRunnerFromXML(JobItem);
                         break;
-
-                    default:
-                        _logger.Error($"Job ID {jobID} Job type \"{jobType}\" is not a valid Job type. Skipping load from config.");
-                        continue;
                 }
+
+                fromConfig.Add(toAdd);
             }
             SetJobs(fromConfig);
 
             return _jobs;
         }
 
+        private FileMover ParseFileMoverFromXML(XElement JobXML)
+        {
+            int jobID = 0;
+            string jobName,inputPath, destinationPath, fileNamePattern;
+            TimeOnly windowStart, windowEnd = TimeOnly.Parse(DateTime.Now.ToShortTimeString());
+            string[] windowDays;
+
+            try
+            {
+                jobID = Int32.Parse(JobXML.Element("JobID").Value);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error loading Job ID {JobXML.Element("JobID").Value} Please confirm that this is a number that can be converted to Integer form.\n" +
+                    $"Exception: {e}");
+                return null;
+            }
+            jobName = JobXML.Element("JobName").Value;
+
+            inputPath = JobXML.Element("InputPath").Value;
+            destinationPath = JobXML.Element("DestinationPath").Value;
+            fileNamePattern = JobXML.Element("FileNamePattern").Value;
+
+            try
+            {
+                windowStart = TimeOnly.Parse(JobXML.Element("WindowStart").Value);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error loading windowStart for Job ID {jobID} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
+                    $"Exception: {e}");
+                return null;
+            }
+
+            try
+            {
+                windowEnd = TimeOnly.Parse(JobXML.Element("WindowEnd").Value);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error loading WindowEnd for Job ID {jobID} Please confirm that this is a timestamp (format: hh:mm) that can be converted to TimeOnly form.\n" +
+                    $"Exception: {e}");
+            }
+
+            windowDays = JobXML.Element("WindowDays").Value.Split("|");
+
+            string str;
+            for (int i = 0; i < windowDays.Length; i++)
+            {
+                str = windowDays[i].Trim();
+                if (str.Length != 3)
+                {
+                    _logger.Error(($"Error loading WindowDays for Job ID {jobID} Please confirm that the string is in the valid format to be parsed by the system I.E. \"Mon|Tue|Thu etc.\"."));
+                    return null;
+                }
+                windowDays[i] = str;
+            }
+
+            FileMover toBeAdded = new FileMover(jobID, jobName, "FileMover", inputPath, destinationPath, fileNamePattern, windowStart, windowEnd, windowDays);
+            return toBeAdded;
+        }
+
+        private CommandRunner ParseCommandRunnerFromXML(XElement JobXML)
+        {
+            int jobID = 0;
+            string jobName;
+
+            try
+            {
+                jobID = Int32.Parse(JobXML.Element("JobID").Value);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error loading Job ID {JobXML.Element("JobID").Value} Please confirm that this is a number that can be converted to Integer form.\n" +
+                    $"Exception: {e}");
+            }
+            jobName = JobXML.Element("JobName").Value;
+
+
+            string command, arguments;
+            bool adminNeeded, retryOnFailure;
+            int retryCount;
+            TimeOnly commandRunTime;
+            string[] windowDays;
+
+            command = JobXML.Element("Command").Value;
+            arguments = JobXML.Element("Arguments").Value;
+            adminNeeded = bool.Parse(JobXML.Element("IsAdminNeeded").Value);
+            retryOnFailure = bool.Parse(JobXML.Element("RetryOnFailure").Value);
+            retryCount = Int32.Parse(JobXML.Element("RetryCount").Value);
+            commandRunTime = TimeOnly.Parse(JobXML.Element("CommandRunTime").Value);
+
+            windowDays = JobXML.Element("WindowDays").Value.Split("|");
+
+            string str;
+            for (int i = 0; i < windowDays.Length; i++)
+            {
+                str = windowDays[i].Trim();
+                if (str.Length != 3)
+                {
+                    _logger.Error(($"Error loading WindowDays for Job ID {jobID} Please confirm that the string is in the valid format to be parsed by the system I.E. \"Mon|Tue|Thu etc.\"."));
+                    return null;
+                }
+                windowDays[i] = str;
+            }
+
+
+            CommandRunner toBeAdded = new CommandRunner(jobID, jobName, "CommandRunner", command, arguments, adminNeeded, retryOnFailure, retryCount, commandRunTime, windowDays);
+            return toBeAdded;
+        }
 
         public List<Job> SetJobs(List<Job> jobs)
         {
@@ -144,10 +192,28 @@ namespace FileWatcher.src.Jobs.Repositories
             string abbreviatedDay = DateTime.Now.DayOfWeek.ToString().Substring(0, 3);
             if (toTest.WindowDays.Contains(abbreviatedDay))
             {
-                TimeOnly currentTime = TimeOnly.Parse(DateTime.Now.ToLongTimeString());
-                if (currentTime > toTest.WindowStart && currentTime < toTest.WindowEnd)
+
+                TimeOnly currentTime = TimeOnly.Parse(DateTime.Now.ToString("HH:mm"));
+
+                switch (toTest.JobType)
                 {
-                    return true;
+                    case "FileMover":
+                        FileMover fileMoverToTest = (FileMover)toTest;
+                        if (currentTime > fileMoverToTest.WindowStart && currentTime < fileMoverToTest.WindowEnd)
+                        {
+                            return true;
+                        }
+                        return false;
+                    case "CommandRunner":
+                        CommandRunner commandRunnerToTest = (CommandRunner)toTest;
+
+                        if (currentTime.Equals(commandRunnerToTest.CommandRunTime))
+                        {
+                            return true;
+                        }
+                        return false;
+                    default:
+                        break;
                 }
             }
             return false;

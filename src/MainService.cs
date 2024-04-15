@@ -37,6 +37,7 @@ namespace FileWatcher
                         job.InitiateWatcher();
                     } else if(!job.IsActive && job.GetType() == typeof(CommandRunner) && !job.IsManuallyOverriden)
                     {
+                        _logger.Info($"Job ID {job.JobID} is open");
                         job.Run();
                     }
                 }

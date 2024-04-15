@@ -17,6 +17,8 @@ namespace FileWatcher.src.Jobs
         public string FileNamePattern { get; set; }
 
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
+        public TimeOnly WindowStart { get; set; }
+        public TimeOnly WindowEnd { get; set; }
 
         public FileMover(int JobID, string JobName, string JobType, string InputPath, string DestinationPath, string FileNamePattern, TimeOnly WindowStart, TimeOnly WindowEnd, string[] WindowDays)
         {
